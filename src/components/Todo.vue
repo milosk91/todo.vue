@@ -7,29 +7,40 @@
       @keyup.enter.native="addTodo"
       clearable
     />
-    <div v-for="(todo, index) in todos" :key="todo.id" class="todo-item">
-      <div class="todo-item-left">
-        <el-checkbox v-model="todo.completed" />
-        <div
-          v-if="!todo.editing"
-          class="todo-item-label"
-          @dblclick="editTodo(todo)"
-          :class="{ completed: todo.completed }"
-        >
-          {{ todo.title }}
+    <transition-group
+      name="fade"
+      enter-active-class="animated fadeInUp"
+      leave-active-class="animated fadeOutDown"
+    >
+      <div
+        v-for="(todo, index) in todosFiltered"
+        :key="todo.id"
+        class="todo-item"
+      >
+        <div class="todo-item-left">
+          <el-checkbox v-model="todo.completed" />
+          <div
+            v-if="!todo.editing"
+            class="todo-item-label"
+            @dblclick="editTodo(todo)"
+            :class="{ completed: todo.completed }"
+          >
+            {{ todo.title }}
+          </div>
+          <el-input
+            v-else
+            v-model="todo.title"
+            class="todo-item-edit"
+            @blur="doneEdit(todo)"
+            @keyup.enter.native="doneEdit(todo)"
+            @keyup.esc.native="cancelEdit(todo)"
+            v-focus
+          />
         </div>
-        <el-input
-          v-else
-          v-model="todo.title"
-          class="todo-item-edit"
-          @blur="doneEdit(todo)"
-          @keyup.enter.native="doneEdit(todo)"
-          @keyup.esc.native="cancelEdit(todo)"
-          v-focus
-        />
+        <div class="remove-item" @click="removeTodo(index)">&times;</div>
       </div>
-      <div class="remove-item" @click="removeTodo(index)">&times;</div>
-    </div>
+    </transition-group>
+
     <div class="extra-container">
       <div>
         <label>
@@ -38,6 +49,38 @@
         >
       </div>
       <div>{{ remaining }} items left</div>
+    </div>
+    <div class="extra-container">
+      <div class="buttons">
+        <el-button
+          type="primary"
+          @click="filter = 'all'"
+          :class="{ active: filter == 'all' }"
+          >All</el-button
+        >
+        <el-button
+          type="primary"
+          @click="filter = 'active'"
+          :class="{ active: filter == 'active' }"
+          >Active</el-button
+        >
+        <el-button
+          type="primary"
+          @click="filter = 'completed'"
+          :class="{ active: filter == 'completed' }"
+          >Completed</el-button
+        >
+      </div>
+      <div>
+        <transition name="fade">
+          <el-button
+            type="primary"
+            @click="clearCompleted"
+            v-if="showClearCompletedButton"
+            >Clear Completed</el-button
+          >
+        </transition>
+      </div>
     </div>
   </div>
 </template>
@@ -85,6 +128,19 @@ export default {
     },
     anyRemaining() {
       return this.remaining != 0;
+    },
+    todosFiltered() {
+      if (this.filter == "all") {
+        return this.todos;
+      } else if (this.filter == "active") {
+        return this.todos.filter(todo => !todo.completed);
+      } else if (this.filter == "completed") {
+        return this.todos.filter(todo => todo.completed);
+      }
+      return this.todos;
+    },
+    showClearCompletedButton() {
+      return this.todos.filter(todo => todo.completed).length > 0;
     }
   },
   directives: {
@@ -125,12 +181,17 @@ export default {
     },
     checkAllTodos() {
       this.todos.forEach(todo => (todo.completed = event.target.checked));
+    },
+    clearCompleted() {
+      this.todos = this.todos.filter(todo => !todo.completed);
     }
   }
 };
 </script>
 
 <style>
+@import url("https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.5.2/animate.min.css");
+
 .todo-input {
   width: 100%;
   padding: 10px 18px;
@@ -142,6 +203,7 @@ export default {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 12px;
+  animation-duration: 0.5s;
 }
 
 .remove-item {
@@ -190,5 +252,20 @@ export default {
   border-top: 1px solid lightgrey;
   padding-top: 14px;
   margin-bottom: 14px;
+}
+
+.buttons {
+  display: flex;
+  align-items: left;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s;
+}
+
+.fade-enter,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>
